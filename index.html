@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Payment Page</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #step-2, #step-3 {
+            display: none;
+        }
+        #qrcode {
+            margin: 20px auto;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+        }
+        .timer {
+            font-size: 18px;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .success-icon {
+            font-size: 60px;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        .amount-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="step-1">
+        <h2>Enter Payment Details</h2>
+        <div class="input-group">
+            <label for="amount">Amount (₹)</label>
+            <input type="number" id="amount" placeholder="Enter amount (e.g., 500)" min="1" required>
+        </div>
+        <button onclick="generateQR()">Proceed to Pay</button>
+    </div>
+
+    <div id="step-2">
+        <h2>Scan & Pay</h2>
+        <div class="amount-display">Total: ₹<span id="display-amount">0</span></div>
+        <div id="qrcode"></div>
+        <p>Open your UPI App (GPay, PhonePe, Paytm) to scan and pay.</p>
+        
+        <div class="loader" id="payment-loader"></div>
+        <p style="color: #666; font-size: 14px;" id="waiting-text">Waiting for payment...</p>
+
+        <div class="timer">Time Remaining: <span id="time">05:00</span></div>
+    </div>
+
+    <div id="step-3">
+        <div class="success-icon">✓</div>
+        <h2>Payment Successful!</h2>
+        <p>Your payment of <b>₹<span id="success-amount">0</span></b> has been received successfully.</p>
+        <button onclick="location.reload()" style="margin-top: 20px;">Make Another Payment</button>
+    </div>
+
+</div>
+
+<script>
+    let timerInterval;
+    let paymentSimulationTimeout;
+
+    function generateQR() {
+        const amount = document.getElementById('amount').value;
+        
+        if (amount === "" || amount <= 0) {
+            alert("Please enter a valid amount greater than 0");
+            return;
+        }
+
+        // Hide Step 1, Show Step 2
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+        
+        // Update Amounts in UI
+        document.getElementById('display-amount').innerText = amount;
+        document.getElementById('success-amount').innerText = amount;
+
+        // Clear any old QR
+        document.getElementById("qrcode").innerHTML = "";
+
+        // Create Dynamic UPI Link (replace dummy@upi with your actual UPI ID for real use)
+        const upiId = "merchant@upi"; 
+        const merchantName = "MyStore";
+        const upiString = `upi://pay?pa=${upiId}&pn=${merchantName}&am=${amount}&cu=INR`;
+
+        // Generate QR Code using qrcode.js
+        new QRCode(document.getElementById("qrcode"), {
+            text: upiString,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Start 5 minute timer
+        startTimer(300, document.getElementById('time'));
+
+        // ==========================================
+        // IMPORTANT REALITY CHECK:
+        // Yahan ek dummy simulation lagaya gaya hai. 
+        // Real project mein frontend directly successful nahi karta. 
+        // Backend webhook se confirmation aane ke baad UI update hota hai.
+        // ==========================================
+        
+        // Simulate payment success after 10 seconds for demo purposes
+        paymentSimulationTimeout = setTimeout(() => {
+            showSuccessScreen();
+        }, 10000); 
+    }
+
+    function startTimer(duration, display) {
+        let timer = duration, minutes, seconds;
+        timerInterval = setInterval(function () {
+            minutes = parseInt(timer / 60, 10);
+            seconds = parseInt(timer % 60, 10);
+
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+
+            display.textContent = minutes + ":" + seconds;
+
+            if (--timer < 0) {
+                clearInterval(timerInterval);
+                clearTimeout(paymentSimulationTimeout); // Stop fake success if timer ends
+                alert("Payment session expired. Please try again.");
+                location.reload(); // Reload page on timeout
+            }
+        }, 1000);
+    }
+
+    function showSuccessScreen() {
+        // Stop timer
+        clearInterval(timerInterval);
+        
+        // Hide Step 2, Show Step 3
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-3').style.display = 'block';
+    }
+</script>
+
+</body>
+  </html>
